@@ -1,4 +1,5 @@
 const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 const User = require('../model/user');
 
 const register = async (req, res) => {
@@ -15,6 +16,7 @@ const register = async (req, res) => {
 
     // 3. Check whether the username already exists
     const existingUsername = await User.findOne({ username });
+
     if (existingUsername) {
       return res.status(400).json({
         message: 'Username already exists.',
@@ -23,28 +25,30 @@ const register = async (req, res) => {
 
     // 4. Check whether the email already exists
     const existingEmail = await User.findOne({ email });
+
     if (existingEmail) {
       return res.status(400).json({
         message: 'Email already exists.',
       });
     }
 
-    // 5. Hash the password using bcrypt before saving it
+    // 5. Hash the password
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-    // 6. Create a new User using the existing User model
-    // Do NOT accept a role from req.body; schema default handles it
+    // 6. Create new user
+    // Role is NOT accepted from req.body.
+    // The schema default should make this "user".
     const newUser = new User({
       username,
       email,
       password: hashedPassword,
     });
 
-    // 7. Save the user to MongoDB
+    // 7. Save user
     await newUser.save();
 
-    // 8. Return an appropriate success response without returning password/hash
+    // 8. Return success response
     return res.status(201).json({
       message: 'User registered successfully.',
       user: {
@@ -55,8 +59,10 @@ const register = async (req, res) => {
         createdAt: newUser.createdAt,
       },
     });
+
   } catch (error) {
     console.error('Registration error:', error.message);
+
     return res.status(500).json({
       message: 'Server error during registration.',
       error: error.message,
@@ -64,37 +70,58 @@ const register = async (req, res) => {
   }
 };
 
+
 const login = async (req, res) => {
   try {
-    // 1. Read email and password from req.body
+    // 1. Read email and password
     const { email, password } = req.body || {};
 
-    // 2. Validate that both fields are provided
+    // 2. Validate fields
     if (!email || !password) {
       return res.status(400).json({
         message: 'Email and password are required.',
       });
     }
 
-    // 3. Search in MongoDB for the user by email
+    // 3. Find user
     const user = await User.findOne({ email });
+
     if (!user) {
       return res.status(400).json({
         message: 'Invalid email or password.',
       });
     }
 
-    // 4. Verify password with bcrypt
-    const isPasswordMatch = await bcrypt.compare(password, user.password);
+    // 4. Verify password
+    const isPasswordMatch = await bcrypt.compare(
+      password,
+      user.password
+    );
+
     if (!isPasswordMatch) {
       return res.status(400).json({
         message: 'Invalid email or password.',
       });
     }
 
-    // 5. Return login successful message
+    // 5. Create JWT
+    const token = jwt.sign(
+      {
+        userId: user._id,
+        role: user.role,
+      },
+      process.env.JWT_SECRET,
+      {
+        expiresIn: process.env.JWT_EXPIRES_IN || '1d',
+      }
+    );
+
+    // 6. Return token + user information
     return res.status(200).json({
       message: 'Login successful',
+
+      token,
+
       user: {
         _id: user._id,
         username: user.username,
@@ -102,13 +129,18 @@ const login = async (req, res) => {
         role: user.role,
       },
     });
+
   } catch (error) {
     console.error('Login error:', error.message);
+
     return res.status(500).json({
       message: 'Server error during login.',
-      error: error.message,
     });
   }
 };
 
-module.exports = { register, login };
+
+module.exports = {
+  register,
+  login,
+};

@@ -3,6 +3,7 @@ require('dotenv').config({ path: path.resolve(__dirname, '.env') });
 const express = require('express'); //install express module and store it in the express variable
 const connectDB = require('./config/db');
 const authRoutes = require('./routes/authRoutes');
+const adminRoutes = require('./routes/adminRoutes');
 
 // 1. Initialize Express application
 const app = express();
@@ -31,3 +32,5 @@ app.use('/api/auth', authRoutes);
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });
+
+app.use('/api/admin', adminRoutes);
