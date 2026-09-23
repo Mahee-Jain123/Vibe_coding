@@ -64,4 +64,51 @@ const register = async (req, res) => {
   }
 };
 
-module.exports = {register};
+const login = async (req, res) => {
+  try {
+    // 1. Read email and password from req.body
+    const { email, password } = req.body || {};
+
+    // 2. Validate that both fields are provided
+    if (!email || !password) {
+      return res.status(400).json({
+        message: 'Email and password are required.',
+      });
+    }
+
+    // 3. Search in MongoDB for the user by email
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(400).json({
+        message: 'Invalid email or password.',
+      });
+    }
+
+    // 4. Verify password with bcrypt
+    const isPasswordMatch = await bcrypt.compare(password, user.password);
+    if (!isPasswordMatch) {
+      return res.status(400).json({
+        message: 'Invalid email or password.',
+      });
+    }
+
+    // 5. Return login successful message
+    return res.status(200).json({
+      message: 'Login successful',
+      user: {
+        _id: user._id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+      },
+    });
+  } catch (error) {
+    console.error('Login error:', error.message);
+    return res.status(500).json({
+      message: 'Server error during login.',
+      error: error.message,
+    });
+  }
+};
+
+module.exports = { register, login };
