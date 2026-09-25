@@ -4,6 +4,7 @@ const express = require('express'); //install express module and store it in the
 const connectDB = require('./config/db');
 const authRoutes = require('./routes/authRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const teamRoutes = require('./routes/teamRoutes');
 
 // 1. Initialize Express application
 const app = express();
@@ -28,9 +29,13 @@ app.get('/', (req, res) => {
 // 6. Mount authentication routes
 app.use('/api/auth', authRoutes);
 
-// 7. Start listening for incoming requests
+// 7. Mount admin routes
+app.use('/api/admin', adminRoutes);
+
+// 8. Mount team routes
+app.use('/api/teams', teamRoutes);
+
+// 9. Start listening for incoming requests
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });
-
-app.use('/api/admin', adminRoutes);
